@@ -8,7 +8,7 @@ API_URL = "http://localhost:8000"
 
 # Page config
 st.set_page_config(
-    page_title="RAG Chatbot",
+    page_title="SmartDoc Bot",
     page_icon="🤖",
     layout="wide"
 )
@@ -123,7 +123,7 @@ with st.sidebar:
 
 
 # Main chat interface
-st.title("🤖 RAG Chatbot with LangGraph")
+st.title("🤖 SmartDoc Bot")
 st.caption("Ask questions about your uploaded documents")
 
 # Display chat messages
