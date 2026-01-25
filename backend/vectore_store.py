@@ -130,68 +130,24 @@ class VectorStoreManager:
         return count
     
     def clear_document(self) -> dict:
-        """🔥 FIXED BULLETPROOF CHROMA WIPE"""
+        """Clear all documents from collection"""
         try:
-            # === PHASE 0: SETUP ===
             initial_count = self.collection.count()
-            chroma_db_path = Path("./chroma_db")
             collection_name = self.collection.name
             
             logger.info("=" * 80)
             logger.info("🗑️  STARTING CHROMA WIPE")
             logger.info(f"Docs: {initial_count}")
-            logger.info(f"Path: {chroma_db_path.absolute()}")
             
             if initial_count == 0:
                 logger.info("Already empty")
                 return {"deleted_count": 0, "success": True}
             
-            # === PHASE 1: CLOSE PROPERLY ===
-            # Delete collection using CLIENT (not collection object)
+            # === FIX: Delete and recreate collection ===
             self.client.delete_collection(name=collection_name)
             logger.info(f"✓ Collection deleted: {collection_name}")
             
-            # Close client heartbeats/connections
-            self.client.heartbeat()
-            self.client.clear_system_cache()
-            gc.collect()
-            time.sleep(1)  # Critical: let file handles release
-            
-            # === PHASE 2: WIPE FILES ===
-            files_deleted = 0
-            if chroma_db_path.exists():
-                logger.info(f"📁 Wiping {chroma_db_path}...")
-                
-                # NUCLEAR OPTION: Delete everything inside
-                for item in chroma_db_path.iterdir():
-                    try:
-                        if item.is_file():
-                            item.unlink()
-                            logger.info(f"  🗑️ FILE: {item.name}")
-                            files_deleted += 1
-                        elif item.is_dir():
-                            shutil.rmtree(item, ignore_errors=True)
-                            logger.info(f"  🗑️ DIR: {item.name}")
-                            files_deleted += 1
-                    except Exception as e:
-                        logger.warning(f"Skip {item}: {e}")
-                
-                logger.info(f"✓ {files_deleted} items deleted")
-            else:
-                logger.info("📁 Folder missing - will create")
-            
-            # === PHASE 3: FRESH START ===
-            chroma_db_path.mkdir(exist_ok=True)
-            
-            # NEW CLIENT (old one corrupted)
-            from chromadb.config import Settings
-            import chromadb
-            
-            self.client = chromadb.PersistentClient(
-                path=str(chroma_db_path),
-                settings=Settings(anonymized_telemetry=False, allow_reset=True)
-            )
-            
+            # ⚠️ CRITICAL: Recreate collection reference immediately
             self.collection = self.client.get_or_create_collection(
                 name=collection_name,
                 metadata={"hnsw:space": "cosine"}
@@ -201,12 +157,10 @@ class VectorStoreManager:
             
             logger.info("✅ DONE!")
             logger.info(f"Before: {initial_count} → After: {final_count}")
-            logger.info(f"Files deleted: {files_deleted}")
             
             return {
                 "success": True,
                 "deleted_count": initial_count,
-                "files_deleted": files_deleted,
                 "final_count": final_count
             }
             
