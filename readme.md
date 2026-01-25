@@ -6,6 +6,10 @@
 ![LangChain](https://img.shields.io/badge/LangChain-0.1+-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
+## 🌐 Live Demo  
+🚀 Try it here: [SmartDoc Bot](https://smartdocbot.streamlit.app)
+
+---
 
 ## ✨ Why SmartDoc Bot?
 
