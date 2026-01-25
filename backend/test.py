@@ -1,4 +1,4 @@
-from vectore_store import VectorStoreManager
+from backend.vectore_store import VectorStoreManager
 import os
 
 print("=== BEFORE ===")

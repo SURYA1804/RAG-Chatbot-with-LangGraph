@@ -10,6 +10,8 @@ import os
 import logging
 import hashlib
 from datetime import datetime
+from PyPDF2.generic import IndirectObject
+
 
 logger = logging.getLogger(__name__)
 
@@ -108,43 +110,90 @@ def process_document(content: bytes, filename: str, file_id: str) -> List[Dict]:
         raise
 
 def extract_pdf_text(content: bytes, filename: str) -> tuple[str, Dict]:
-    """
-    Extract text from PDF with metadata
-    
-    Returns:
-        Tuple of (extracted_text, metadata_dict)
-    """
     try:
         logger.info("  Extracting from PDF...")
         pdf_file = io.BytesIO(content)
         pdf_reader = PdfReader(pdf_file)
-        
+
         num_pages = len(pdf_reader.pages)
         logger.info(f"  PDF has {num_pages} pages")
-        
+
         text = ""
         for page_num, page in enumerate(pdf_reader.pages, 1):
             page_text = page.extract_text()
             if page_text:
                 text += f"\n--- Page {page_num} ---\n{page_text}\n"
-        
-        # Extract PDF metadata
-        pdf_metadata = pdf_reader.metadata if pdf_reader.metadata else {}
-        
+
+        pdf_metadata = pdf_reader.metadata or {}
+
         metadata = {
             "document_type": "pdf",
             "page_count": num_pages,
-            "pdf_title": str(pdf_metadata.get('/Title', '')),
-            "pdf_author": str(pdf_metadata.get('/Author', '')),
-            "has_images": any(page.images for page in pdf_reader.pages),
+            "pdf_title": str(pdf_metadata.get("/Title", "")),
+            "pdf_author": str(pdf_metadata.get("/Author", "")),
+            "has_images": pdf_has_images(pdf_reader),
         }
-        
+
         logger.info(f"  ✓ Extracted {len(text)} chars from {num_pages} pages")
         return text.strip(), metadata
-        
+
     except Exception as e:
         logger.error(f"Error extracting PDF text: {e}")
         raise ValueError(f"Failed to extract text from PDF: {e}")
+
+    
+def pdf_has_images(pdf_reader):
+    """Safely check if PDF has images, handling IndirectObject errors gracefully."""
+    try:
+        for page in pdf_reader.pages:
+            # Safely get resources - handle IndirectObject
+            try:
+                resources = page.get("/Resources")
+                if not resources:
+                    continue
+                # Resolve if IndirectObject
+                if hasattr(resources, 'get_object'):
+                    resources = resources.get_object()
+            except:
+                continue
+
+            # Safely get XObject
+            try:
+                xobject = resources.get("/XObject")
+                if not xobject:
+                    continue
+                # Resolve if IndirectObject
+                if hasattr(xobject, 'get_object'):
+                    xobject = xobject.get_object()
+            except:
+                continue
+
+            # Check each XObject safely
+            try:
+                if isinstance(xobject, dict):
+                    for obj_key, obj in xobject.items():
+                        try:
+                            # Double resolve for nested IndirectObjects
+                            obj_resolved = obj
+                            if hasattr(obj, 'get_object'):
+                                obj_resolved = obj.get_object()
+                            
+                            # Check if it's an image
+                            if isinstance(obj_resolved, dict):
+                                subtype = obj_resolved.get("/Subtype")
+                                if subtype == "/Image":
+                                    return True
+                        except:
+                            # Skip problematic objects
+                            continue
+            except:
+                continue
+                
+    except Exception:
+        # If anything fails, assume no images to avoid blocking text extraction
+        pass
+    
+    return False
 
 def extract_docx_text(content: bytes, filename: str) -> tuple[str, Dict]:
     """

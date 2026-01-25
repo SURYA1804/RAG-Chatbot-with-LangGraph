@@ -7,9 +7,9 @@ from pathlib import Path
 import uuid
 import os
 
-from vectore_store import VectorStoreManager
-from graph import create_rag_agent
-from utils import process_document
+from backend.vectore_store import VectorStoreManager
+from backend.graph import create_rag_agent
+from backend.utils import process_document
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

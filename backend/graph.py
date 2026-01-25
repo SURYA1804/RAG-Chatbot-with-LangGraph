@@ -7,7 +7,7 @@ import os
 import logging
 from dotenv import load_dotenv
 
-from vectore_store import VectorStoreManager
+from backend.vectore_store import VectorStoreManager
 
 load_dotenv()
 
@@ -547,11 +547,7 @@ Answer:"""
         out_of_scope_message = (
             "I don't have information about that in my knowledge base. "
             "I can only answer questions about the documents that have been uploaded. "
-            "Please ask questions related to the available documents, such as:\n"
-            "- Company information\n"
-            "- Branch locations\n"
-            "- Products and services\n"
-            "- Policies and procedures"
+            "Please ask questions related to the uploaded documents"
         )
         
         logger.info("Returning out-of-scope message")
